@@ -1,34 +1,34 @@
-# Clinical PDF Splitter ????
+# Clinical PDF Splitter
 
-Herramienta de escritorio en Python con interfaz gr·fica para dividir archivos PDF escaneados que contienen m˙ltiples historias clÌnicas o estudios mÈdicos, separ·ndolos en documentos individuales por paciente mediante **OCR** (Reconocimiento ”ptico de Caracteres).
+Herramienta de escritorio en Python con interfaz gr√°fica para dividir archivos PDF escaneados que contienen m√∫ltiples historias cl√≠nicas o estudios m√©dicos, separ√°ndolos en documentos individuales por paciente mediante **OCR** (Reconocimiento √ìptico de Caracteres).
 
 ---
 
-## ?? CaracterÌsticas principales
+## Caracter√≠sticas principales
 
-- **Procesamiento de PDFs escaneados:** Renderiza p·ginas a alta resoluciÛn y extrae el texto mediante **Tesseract OCR**.
+- **Procesamiento de PDFs escaneados:** Renderiza p√°ginas a alta resoluci√≥n y extrae el texto mediante **Tesseract OCR**.
 - **Sin dependencia externa de Poppler:** Utiliza pypdfium2 para renderizar PDFs de manera nativa, ligera y sin necesidad de instalar binarios adicionales de Poppler.
-- **DetecciÛn inteligente de cÛdigos:**
-  - Busca patrones como `MÛdulo: NM1A GE0558` y extrae el identificador del paciente (ej. `GE0558`).
-  - Detecta identificadores alternativos como `CÛdigo paciente: [C”DIGO]`.
-  - Expresiones regulares con tolerancia a imperfecciones tÌpicas de escaneo u OCR (con o sin tildes, may˙sculas/min˙sculas).
-- **AgrupaciÛn continua de historias clÌnicas:** Si una p·gina interna no incluye encabezado con cÛdigo, se asigna autom·ticamente al ˙ltimo paciente detectado.
-- **Interfaz Gr·fica amigable (GUI):** Selector de archivos y carpetas, barra de progreso en tiempo real y terminal de log integrada.
-- **100% Local y Seguro:** El procesamiento se realiza completamente offline en tu m·quina. Ning˙n dato mÈdico es transmitido a la nube.
+- **Detecci√≥n inteligente de c√≥digos:**
+  - Busca patrones como `M√≥dulo: NM5B GE3418` y extrae el identificador del paciente (ej. `GE3418`).
+  - Detecta identificadores alternativos como `C√≥digo paciente: [C√ìDIGO]`.
+  - Expresiones regulares con tolerancia a imperfecciones t√≠picas de escaneo u OCR (con o sin tildes, may√∫sculas/min√∫sculas).
+- **Agrupaci√≥n continua de historias cl√≠nicas:** Si una p√°gina interna no incluye encabezado con c√≥digo, se asigna autom√°ticamente al √∫ltimo paciente detectado.
+- **Interfaz Gr√°fica amigable (GUI):** Selector de archivos y carpetas, barra de progreso en tiempo real y terminal de log integrada.
+- **100% Local y Seguro:** El procesamiento se realiza completamente offline en tu m√°quina. Ning√∫n dato m√©dico es transmitido a la nube.
 
 ---
 
-## ?? Requisitos previos
+## Requisitos previos
 
 1. **Python 3.8 o superior** instalado.
 2. **Tesseract OCR**:
    - Descargar el instalador para Windows desde [UB-Mannheim Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki).
-   - Instalarlo en la ruta est·ndar (por ejemplo C:\Program Files\Tesseract-OCR). El programa detecta esta ubicaciÛn autom·ticamente.
-   - *Opcional:* Si se desea reconocimiento en espaÒol, asegurarse de marcar el paquete de idioma espaÒol (*Spanish*) durante la instalaciÛn de Tesseract.
+   - Instalarlo en la ruta est√°ndar (por ejemplo C:\Program Files\Tesseract-OCR). El programa detecta esta ubicaci√≥n autom√°ticamente.
+   - *Opcional:* Si se desea reconocimiento en espa√±ol, asegurarse de marcar el paquete de idioma espa√±ol (*Spanish*) durante la instalaci√≥n de Tesseract.
 
 ---
 
-## ??? InstalaciÛn
+## Instalaci√≥n
 
 1. **Clonar este repositorio:**
    `ash
@@ -50,34 +50,34 @@ Herramienta de escritorio en Python con interfaz gr·fica para dividir archivos P
 
 ---
 
-## ?? Uso
+## Uso
 
-1. Iniciar la aplicaciÛn:
+1. Iniciar la aplicaci√≥n:
    `ash
    python pdf_splitter.py
    `
 2. En la ventana que aparece:
-   - Presionar **"Seleccionar PDF..."** y elegir el archivo escaneado con las historias clÌnicas.
-   - Seleccionar la **carpeta de salida** (por defecto sugerir· una carpeta llamada Pacientes_Separados).
+   - Presionar **"Seleccionar PDF..."** y elegir el archivo escaneado con las historias cl√≠nicas.
+   - Seleccionar la **carpeta de salida** (por defecto sugerir√° una carpeta llamada Pacientes_Separados).
    - Hacer clic en **"? Procesar"**.
-3. El log detallar· cada p·gina procesada y los archivos resultantes generados (ej. GE0558.pdf).
+3. El log detallar√° cada p√°gina procesada y los archivos resultantes generados (ej. GE0558.pdf).
 
 ---
 
-## ?? Estructura del proyecto
+## Estructura del proyecto
 
 `	ext
 clinical-pdf-splitter/
-¶
-+-- pdf_splitter.py     # AplicaciÛn principal (GUI, OCR y lÛgica de divisiÛn)
+¬¶
++-- pdf_splitter.py     # Aplicaci√≥n principal (GUI, OCR y l√≥gica de divisi√≥n)
 +-- requirements.txt    # Dependencias de Python
-+-- .gitignore          # ExclusiÛn de archivos temporales y PDFs de datos
-+-- README.md           # DocumentaciÛn del proyecto
++-- .gitignore          # Exclusi√≥n de archivos temporales y PDFs de datos
++-- README.md           # Documentaci√≥n del proyecto
 `
 
 ---
 
-## ?? Privacidad de datos
+## Privacidad de datos
 
-Este software est· diseÒado para el ·mbito de la salud:
-- El archivo .gitignore incluye exclusiones para todos los archivos .pdf, garantizando que ninguna historia clÌnica real o dato sensible sea subido por accidente a los repositorios de control de versiones.
+Este software est√° dise√±ado para el √°mbito de la salud:
+- El archivo .gitignore incluye exclusiones para todos los archivos .pdf, garantizando que ninguna historia cl√≠nica real o dato sensible sea subido por accidente a los repositorios de control de versiones.

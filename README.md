@@ -31,20 +31,20 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
 ## Instalación
 
 1. **Clonar este repositorio:**
-   `ash
+   `bash
    git clone https://github.com/TU-USUARIO/clinical-pdf-splitter.git
    cd clinical-pdf-splitter
    `
 
 2. **(Recomendado) Crear y activar un entorno virtual:**
-   `ash
+   `bash
    python -m venv venv
    # En Windows:
    venv\Scripts\activate
    `
 
 3. **Instalar las dependencias:**
-   `ash
+   `bash
    pip install -r requirements.txt
    `
 
@@ -53,14 +53,14 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
 ## Uso
 
 1. Iniciar la aplicación:
-   `ash
+   `bash
    python pdf_splitter.py
    `
 2. En la ventana que aparece:
    - Presionar **"Seleccionar PDF..."** y elegir el archivo escaneado con las historias clínicas.
    - Seleccionar la **carpeta de salida** (por defecto sugerirá una carpeta llamada Pacientes_Separados).
    - Hacer clic en **"? Procesar"**.
-3. El log detallará cada página procesada y los archivos resultantes generados (ej. GE0558.pdf).
+3. El log detallará cada página procesada y los archivos resultantes generados (ej. GE3418.pdf).
 
 ---
 

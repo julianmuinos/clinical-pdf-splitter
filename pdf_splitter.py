@@ -13,6 +13,7 @@ Requisitos:
 
 import os
 import re
+import sys
 import threading
 import tkinter as tk
 import traceback
@@ -28,16 +29,35 @@ from PyPDF2 import PdfReader, PdfWriter
 # Configuración de OCR
 # ---------------------------------------------------------------------------
 
-# Auto-detectar ruta de Tesseract en Windows si no está en PATH
+# Directorio base de la aplicación (funciona tanto en script como en ejecutable congelado)
+if getattr(sys, "frozen", False):
+    _APP_DIR = os.path.dirname(sys.executable)
+    _INTERNAL_DIR = getattr(sys, "_MEIPASS", os.path.join(_APP_DIR, "_internal"))
+else:
+    _APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    _INTERNAL_DIR = _APP_DIR
+
+# Auto-detectar ruta de Tesseract (prioriza la versión local empaquetada)
 tesseract_rutas_comunes = [
+    os.path.join(_APP_DIR, "tesseract", "tesseract.exe"),
+    os.path.join(_INTERNAL_DIR, "tesseract", "tesseract.exe"),
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
     os.path.expanduser(r"~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"),
 ]
+
 for ruta in tesseract_rutas_comunes:
     if os.path.exists(ruta):
         pytesseract.pytesseract.tesseract_cmd = ruta
+        # Si tiene carpeta tessdata adyacente, fijar TESSDATA_PREFIX
+        tessdata_local = os.path.join(os.path.dirname(ruta), "tessdata")
+        if os.path.exists(tessdata_local):
+            os.environ["TESSDATA_PREFIX"] = tessdata_local
+        print(f"[OCR] Tesseract configurado: {ruta}")
+        if "TESSDATA_PREFIX" in os.environ:
+            print(f"[OCR] TESSDATA_PREFIX: {os.environ['TESSDATA_PREFIX']}")
         break
+
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +272,19 @@ class AplicacionSeparadorPDF:
         self.ventana.geometry("700x550")
         self.ventana.resizable(True, True)
         self.ventana.minsize(600, 450)
+
+        # Cargar ícono de la ventana si está disponible
+        for icon_candidate in [
+            os.path.join(_APP_DIR, "assets", "icon.ico"),
+            os.path.join(_INTERNAL_DIR, "assets", "icon.ico"),
+            os.path.join(_APP_DIR, "icon.ico"),
+        ]:
+            if os.path.exists(icon_candidate):
+                try:
+                    self.ventana.iconbitmap(icon_candidate)
+                    break
+                except Exception:
+                    pass
 
         self.ruta_pdf = tk.StringVar(value="")
         self.ruta_salida = tk.StringVar(value="")

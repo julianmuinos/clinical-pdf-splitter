@@ -82,8 +82,18 @@ def extraer_texto_pagina(imagen) -> str:
 # ---------------------------------------------------------------------------
 
 # Regex tolerante a errores de OCR (la tilde de "Módulo" puede no detectarse)
+# Formato: "Módulo: <prefijo> <código_paciente>"
+#
+# Prefijos de módulo conocidos (capturados por \S+):
+#   NM0, NM2, NM3, NM4, NM10, NM1A, NM5B, NM9A
+#
+# Formatos de código de paciente soportados:
+#   - Solo dígitos:            1710
+#   - 1 letra + 3-4 dígitos:  P050, D0004, F0001
+#   - 2 letras + 4 dígitos:   GE1347, PR0019
+#   - 3 letras + 3 dígitos:   GEP086
 _REGEX_MODULO = re.compile(
-    r"[Mm][óoÓO]dulo\s*:\s*(\S+)\s+([A-Za-z]{2}\d{4})",
+    r"[Mm][óoÓO]dulo\s*:\s*(\S+)\s+([A-Za-z]{0,3}\d{3,4})",
     re.IGNORECASE,
 )
 
@@ -96,15 +106,16 @@ _REGEX_CODIGO_PACIENTE = re.compile(
 def detectar_codigo(texto: str) -> Optional[str]:
     """Detecta el código del paciente a partir del texto OCR de una página.
 
-    Busca primero el patrón 'Módulo: XXXX YY1234' y extrae la segunda parte
-    (ej: 'GE0558'). Si no lo encuentra, intenta con 'Código paciente: XXXX'.
+    Busca primero el patrón 'Módulo: XXXX <código>' y extrae la segunda parte.
+    Formatos de código reconocidos: GE0558, PR0019, GEP086, D0004, P050, 1710.
+    Si no lo encuentra, intenta con 'Código paciente: XXXX'.
 
     Args:
         texto: Texto OCR de la página.
 
     Returns:
-        El código identificador del paciente (ej: 'GE0558') o None si no se
-        encontró ningún patrón.
+        El código identificador del paciente o None si no se encontró
+        ningún patrón.
     """
     # Intentar detectar por módulo
     match_modulo = _REGEX_MODULO.search(texto)

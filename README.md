@@ -10,9 +10,9 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
 - **Sin dependencia externa de Poppler:** Utiliza pypdfium2 para renderizar PDFs de manera nativa, ligera y sin necesidad de instalar binarios adicionales de Poppler.
 - **Detección inteligente de códigos:**
   - Busca patrones con estructura `Módulo: <prefijo> <código>` y extrae el identificador del paciente.
-  - **Prefijos de módulo verificados:** `NM0`, `NM2`, `NM3`, `NM4`, `NM10`, `NM1A`, `NM5B`, `NM9A` y variantes alfanuméricas.
+  - **Prefijos de módulo verificados:** `NM0`, `NM1`, `NM2`, `NM3`, `NM4`, `NM5`, `NM10`, `NM1A`, `NM5B`, `NM9A` y variantes alfanuméricas.
   - **Formatos de código de paciente soportados:**
-    - Solo numéricos de 3 a 4 dígitos (ej. `1710`).
+    - Solo numéricos de 1 a 4 dígitos (ej. `79`, `102`, `1710`).
     - 1 letra + 3 a 4 dígitos (ej. `P050`, `D0004`, `F0001`).
     - 2 letras + 4 dígitos (ej. `GE1347`, `PR0019`).
     - 3 letras + 3 dígitos (ej. `GEP086`).
@@ -66,7 +66,7 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
    - Presionar **"Seleccionar PDF..."** y elegir el archivo escaneado con las historias clínicas.
    - Seleccionar la **carpeta de salida** (por defecto sugerirá una carpeta llamada Pacientes_Separados).
    - Hacer clic en **"⚙ Procesar"**.
-3. El log detallará cada página procesada y los archivos resultantes generados (ej. `GE3418.pdf`, `P050.pdf`, `1710.pdf`).
+3. El log detallará cada página procesada y los archivos resultantes generados (ej. `GE3418.pdf`, `P050.pdf`, `1710.pdf`, `102.pdf`, `79.pdf`).
 
 ---
 

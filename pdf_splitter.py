@@ -85,15 +85,15 @@ def extraer_texto_pagina(imagen) -> str:
 # Formato: "Módulo: <prefijo> <código_paciente>"
 #
 # Prefijos de módulo conocidos (capturados por \S+):
-#   NM0, NM2, NM3, NM4, NM10, NM1A, NM5B, NM9A
+#   NM0, NM1, NM2, NM3, NM4, NM5, NM10, NM1A, NM5B, NM9A
 #
 # Formatos de código de paciente soportados:
-#   - Solo dígitos:            1710
+#   - Solo dígitos (1-4):     79, 102, 1710
 #   - 1 letra + 3-4 dígitos:  P050, D0004, F0001
 #   - 2 letras + 4 dígitos:   GE1347, PR0019
 #   - 3 letras + 3 dígitos:   GEP086
 _REGEX_MODULO = re.compile(
-    r"[Mm][óoÓO]dulo\s*:\s*(\S+)\s+([A-Za-z]{0,3}\d{3,4})",
+    r"[Mm][óoÓO]dulo\s*:\s*(\S+)\s+([A-Za-z]*\d+)",
     re.IGNORECASE,
 )
 

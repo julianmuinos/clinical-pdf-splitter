@@ -81,7 +81,11 @@ def extraer_texto_pagina(imagen) -> str:
 # Módulo de detección de códigos
 # ---------------------------------------------------------------------------
 
-# Regex tolerante a errores de OCR (la tilde de "Módulo" puede no detectarse)
+# Regex tolerante a errores severos de OCR en la palabra "Módulo".
+# El OCR puede producir variantes como: módulo, modulo, móbuio, moóduio, etc.
+# El patrón m\S{2,6}o matchea cualquier palabra de 4-8 caracteres que empiece
+# con 'm' y termine con 'o', seguida de ':'.
+#
 # Formato: "Módulo: <prefijo> <código_paciente>"
 #
 # Prefijos de módulo conocidos (capturados por \S+):
@@ -93,12 +97,15 @@ def extraer_texto_pagina(imagen) -> str:
 #   - 2 letras + 4 dígitos:   GE1347, PR0019
 #   - 3 letras + 3 dígitos:   GEP086
 _REGEX_MODULO = re.compile(
-    r"[Mm][óoÓO]dulo\s*:\s*(\S+)\s+([A-Za-z]*\d+)",
+    r"m\S{2,6}o\s*:\s*(\S+)\s+([A-Za-z]*\d+)",
     re.IGNORECASE,
 )
 
+# Regex para "Código paciente:" y variantes abreviadas.
+# Soporta: Código paciente, Codigo paciente, COD. PACIENTE,
+#          CÓD. PACIENTE, có. paciente (OCR pierde la 'd'), cod paciente, etc.
 _REGEX_CODIGO_PACIENTE = re.compile(
-    r"[Cc][óoÓO]digo\s+[Pp]aciente\s*:\s*(\S+)",
+    r"c[óoÓO]d?(?:igo)?\.?\s+paciente\s*:\s*(\S+)",
     re.IGNORECASE,
 )
 
@@ -106,9 +113,12 @@ _REGEX_CODIGO_PACIENTE = re.compile(
 def detectar_codigo(texto: str) -> Optional[str]:
     """Detecta el código del paciente a partir del texto OCR de una página.
 
-    Busca primero el patrón 'Módulo: XXXX <código>' y extrae la segunda parte.
-    Formatos de código reconocidos: GE0558, PR0019, GEP086, D0004, P050, 1710.
-    Si no lo encuentra, intenta con 'Código paciente: XXXX'.
+    Busca primero el patrón 'Módulo: XXXX <código>' (tolerante a corrupciones
+    OCR severas de la palabra "Módulo") y extrae la segunda parte.
+    Formatos de código reconocidos: GE0558, PR0019, GEP086, D0004, P050, 1710, 102, 79.
+
+    Si no lo encuentra, intenta con 'Código paciente: XXXX' y variantes
+    abreviadas como 'COD. PACIENTE:', 'CÓD. PACIENTE:', 'có. paciente:'.
 
     Args:
         texto: Texto OCR de la página.

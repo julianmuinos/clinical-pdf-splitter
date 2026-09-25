@@ -9,14 +9,14 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
 - **Procesamiento de PDFs escaneados:** Renderiza páginas a alta resolución y extrae el texto mediante **Tesseract OCR**.
 - **Sin dependencia externa de Poppler:** Utiliza pypdfium2 para renderizar PDFs de manera nativa, ligera y sin necesidad de instalar binarios adicionales de Poppler.
 - **Detección inteligente de códigos:**
-  - Busca patrones con estructura `Módulo: <prefijo> <código>` y extrae el identificador del paciente.
+  - Busca patrones con estructura `Módulo: <prefijo> <código>` y extrae el identificador del paciente. Tolerante a corrupciones severas de OCR en la palabra "Módulo" (por ejemplo `móbuio`, `moóduio`).
   - **Prefijos de módulo verificados:** `NM0`, `NM1`, `NM2`, `NM3`, `NM4`, `NM5`, `NM10`, `NM1A`, `NM5B`, `NM9A` y variantes alfanuméricas.
   - **Formatos de código de paciente soportados:**
     - Solo numéricos de 1 a 4 dígitos (ej. `79`, `102`, `1710`).
     - 1 letra + 3 a 4 dígitos (ej. `P050`, `D0004`, `F0001`).
     - 2 letras + 4 dígitos (ej. `GE1347`, `PR0019`).
     - 3 letras + 3 dígitos (ej. `GEP086`).
-  - **Mecanismo de respaldo:** Si una hoja no presenta el encabezado de módulo, detecta identificadores alternativos como `Código paciente: [CÓDIGO]`.
+  - **Mecanismo de respaldo:** Si una hoja no presenta el encabezado de módulo, detecta identificadores alternativos como `Código paciente:`, `COD. PACIENTE:`, `CÓD. PACIENTE:` y variantes OCR abreviadas.
   - Expresiones regulares tolerantes a fallos típicos de escaneo u OCR (con o sin tildes, mayúsculas/minúsculas).
 - **Agrupación continua de historias clínicas:** Si una página interna no incluye encabezado con código, se asigna automáticamente al último paciente detectado.
 - **Interfaz Gráfica amigable (GUI):** Selector de archivos y carpetas, barra de progreso en tiempo real y terminal de log integrada.

@@ -86,13 +86,13 @@ def extraer_texto_pagina(imagen) -> str:
 # El patrón m\S{2,6}o matchea cualquier palabra de 4-8 caracteres que empiece
 # con 'm' y termine con 'o', seguida de ':'.
 #
-# Formato: "Módulo: <prefijo> <código_paciente>"
+# Formato: "Módulo: <prefijo> <número_hc>"
 #
 # Prefijos de módulo conocidos (capturados por \S+):
 #   NM0, NM1, NM2, NM3, NM4, NM5, NM10, NM1A, NM5B, NM9A
 #
-# Formatos de código de paciente soportados:
-#   - Solo dígitos (1-4):     79, 102, 1710
+# Formatos de número de historia clínica soportados:
+#   - Solo dígitos (1-4):     79, 102, 990, 1710
 #   - 1 letra + 3-4 dígitos:  P050, D0004, F0001
 #   - 2 letras + 4 dígitos:   GE1347, PR0019
 #   - 3 letras + 3 dígitos:   GEP086
@@ -101,24 +101,75 @@ _REGEX_MODULO = re.compile(
     re.IGNORECASE,
 )
 
-# Regex para "Código paciente:" y variantes abreviadas.
+# Regex para "Código paciente:" y variantes abreviadas con alta tolerancia OCR.
 # Soporta: Código paciente, Codigo paciente, COD. PACIENTE,
-#          CÓD. PACIENTE, có. paciente (OCR pierde la 'd'), cod paciente, etc.
+#          CÓD. PACIENTE, có. paciente (OCR pierde la 'd'),
+#          c?b. paciente / c?p. paciente (OCR corrompe el acento y/o la 'd').
+# Se usa un patrón permisivo [^\s]{0,4} entre 'c' y 'paciente' para absorber
+# cualquier secuencia de ruido OCR corta (máx. 4 chars no-espacio).
 _REGEX_CODIGO_PACIENTE = re.compile(
-    r"c[óoÓO]d?(?:igo)?\.?\s+paciente\s*:\s*(\S+)",
+    r"c[^\s]{0,4}\.?\s+paciente\s*:\s*(\S+)",
     re.IGNORECASE,
 )
+
+# Regex para "Paciente: XXXX" — formato alternativo que aparece en remitos,
+# recetas y otros documentos vinculados a la historia clínica.
+# Ej: "Paciente: MNICH25021988" (iniciales del paciente + fecha de nacimiento).
+# El código tiene formato: 2-6 letras + 6-12 dígitos.
+# Solo aplica al inicio de línea (re.MULTILINE) para evitar falsos positivos.
+_REGEX_PACIENTE_SOLO = re.compile(
+    r"^paciente\s*:\s*([A-Za-z]{2,6}\d{6,12})",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def extraer_identificadores(texto: str) -> tuple[Optional[str], Optional[str]]:
+    """Extrae de forma independiente ambos identificadores presentes en la página.
+
+    A diferencia de :func:`detectar_codigo`, no prioriza uno sobre el otro:
+    extrae el número del módulo Y el código largo del paciente por separado,
+    lo que permite construir referencias cruzadas entre ambos.
+
+    Args:
+        texto: Texto OCR de la página.
+
+    Returns:
+        Tupla ``(codigo_modulo, codigo_paciente_largo)`` donde:
+
+        - ``codigo_modulo``: número de historia clínica extraído del campo
+          'Módulo:' (ej. ``"990"``), o ``None`` si no se encontró.
+        - ``codigo_paciente_largo``: código alfanumérico largo proveniente
+          de 'cód. paciente:' o 'Paciente:' (ej. ``"MHUBR17121943"``),
+          o ``None`` si no se encontró.
+    """
+    codigo_modulo: Optional[str] = None
+    codigo_paciente: Optional[str] = None
+
+    # Intentar detectar número de módulo (identificador principal de HC)
+    match_modulo = _REGEX_MODULO.search(texto)
+    if match_modulo:
+        codigo_modulo = match_modulo.group(2).upper()
+
+    # Intentar detectar código largo del paciente
+    # Primero por "cód. paciente:" (en páginas de HC con encabezado)
+    match_cod = _REGEX_CODIGO_PACIENTE.search(texto)
+    if match_cod:
+        codigo_paciente = match_cod.group(1).strip().upper()
+    else:
+        # Luego por "Paciente:" (en remitos, recetas y documentos adjuntos)
+        match_pac = _REGEX_PACIENTE_SOLO.search(texto)
+        if match_pac:
+            codigo_paciente = match_pac.group(1).strip().upper()
+
+    return codigo_modulo, codigo_paciente
 
 
 def detectar_codigo(texto: str) -> Optional[str]:
     """Detecta el código del paciente a partir del texto OCR de una página.
 
-    Busca primero el patrón 'Módulo: XXXX <código>' (tolerante a corrupciones
-    OCR severas de la palabra "Módulo") y extrae la segunda parte.
-    Formatos de código reconocidos: GE0558, PR0019, GEP086, D0004, P050, 1710, 102, 79.
-
-    Si no lo encuentra, intenta con 'Código paciente: XXXX' y variantes
-    abreviadas como 'COD. PACIENTE:', 'CÓD. PACIENTE:', 'có. paciente:'.
+    Wrapper de compatibilidad sobre :func:`extraer_identificadores`.
+    Prioriza el número del módulo (identificador primario de HC); si no está
+    disponible, devuelve el código largo del paciente.
 
     Args:
         texto: Texto OCR de la página.
@@ -127,19 +178,8 @@ def detectar_codigo(texto: str) -> Optional[str]:
         El código identificador del paciente o None si no se encontró
         ningún patrón.
     """
-    # Intentar detectar por módulo
-    match_modulo = _REGEX_MODULO.search(texto)
-    if match_modulo:
-        codigo_modulo = match_modulo.group(2).upper()
-        return codigo_modulo
-
-    # Intentar detectar por código paciente
-    match_paciente = _REGEX_CODIGO_PACIENTE.search(texto)
-    if match_paciente:
-        codigo_paciente = match_paciente.group(1).strip()
-        return codigo_paciente
-
-    return None
+    codigo_modulo, codigo_paciente = extraer_identificadores(texto)
+    return codigo_modulo or codigo_paciente
 
 
 # ---------------------------------------------------------------------------
@@ -154,21 +194,38 @@ def dividir_pdf(
 ) -> dict:
     """Divide un PDF escaneado en archivos individuales por paciente.
 
+    Implementa un algoritmo de **dos pasadas**:
+
+    1. **Pasada OCR**: renderiza y aplica OCR a todas las páginas, almacena
+       los textos en memoria y construye un mapa de referencias cruzadas
+       ``{código_largo_paciente → número_módulo}`` a partir de las páginas
+       que contienen ambos campos simultáneamente (encabezado de HC completo).
+
+    2. **Pasada de agrupación**: recorre los textos cacheados y determina el
+       código efectivo de cada página mediante la siguiente prioridad:
+
+       1. Número de módulo detectado directamente en la página.
+       2. Código largo resuelto vía el mapa (ej. página de remito con solo
+          ``Paciente: MHUBR17121943`` → resuelve a módulo ``990``).
+       3. Código largo sin resolver (cuando no existe módulo correspondiente).
+       4. Último paciente detectado (páginas totalmente sin identificador).
+
     Args:
         ruta_pdf: Ruta al archivo PDF de entrada.
         carpeta_salida: Ruta a la carpeta donde se guardarán los PDFs separados.
-        callback_progreso: Función callback(pagina_actual, total_paginas) para
-            actualizar la barra de progreso.
+        callback_progreso: Función callback(paso_actual, total_pasos) para
+            actualizar la barra de progreso (total_pasos = total_paginas × 2).
         callback_log: Función callback(mensaje) para enviar mensajes de log.
 
     Returns:
-        Diccionario con estadísticas del procesamiento:
-        {
-            "total_paginas": int,
-            "pacientes_encontrados": int,
-            "archivos_generados": list[str],
-            "paginas_sin_codigo": int,
-        }
+        Diccionario con estadísticas del procesamiento::
+
+            {
+                "total_paginas": int,
+                "pacientes_encontrados": int,
+                "archivos_generados": list[str],
+                "paginas_sin_codigo": int,
+            }
     """
 
     def log(msg: str):
@@ -180,61 +237,113 @@ def dividir_pdf(
     # Abrir el PDF con pypdfium2 para renderizado y PyPDF2 para manipulación
     pdf_doc = pdfium.PdfDocument(ruta_pdf)
     total_paginas = len(pdf_doc)
+    # El progreso se distribuye en dos pasadas de igual peso
+    total_pasos = total_paginas * 2
     log(f"Total de páginas: {total_paginas}")
 
     reader = PdfReader(ruta_pdf)
 
-    # Estructura para agrupar páginas por paciente
-    # Lista de tuplas: (codigo_paciente, [indices_de_paginas])
-    grupos: list[tuple[str, list[int]]] = []
-    codigo_actual: Optional[str] = None
-    paginas_sin_codigo = 0
+    # ---------------------------------------------------------------------------
+    # Pasada 1: Extracción OCR y construcción del mapa de referencias cruzadas
+    # ---------------------------------------------------------------------------
+    # mapa_cod_largo_a_modulo vincula el código largo del paciente
+    # (campo "cód. paciente:" o "Paciente:") con el número del módulo
+    # (campo "Módulo: NMx NNNN"), extraídos de páginas que contienen ambos.
+    # Ejemplo: {"MHUBR17121943": "990"}
+    # ---------------------------------------------------------------------------
+    log("\n── Pasada 1/2: Extracción OCR y construcción de referencias cruzadas ──")
+    textos_paginas: list[str] = []
+    mapa_cod_largo_a_modulo: dict[str, str] = {}
 
     try:
-        # Procesar cada página una a una (ahorra memoria y procesa al instante)
         for i in range(total_paginas):
             num_pagina = i + 1
-            log(f"\n--- Página {num_pagina}/{total_paginas} ---")
+            log(f"\n  [OCR] Página {num_pagina}/{total_paginas}")
 
             # Renderizar página a imagen (300 DPI)
             pagina = pdf_doc[i]
             imagen = pagina.render(scale=300 / 72).to_pil()
 
-            # Aplicar OCR
+            # Aplicar OCR y cachear texto
             texto = extraer_texto_pagina(imagen)
-            log(f"  Texto OCR extraído ({len(texto)} caracteres)")
+            textos_paginas.append(texto)
+            log(f"  Texto extraído ({len(texto)} caracteres)")
 
-            # Detectar código
-            codigo = detectar_codigo(texto)
+            codigo_modulo, codigo_paciente = extraer_identificadores(texto)
 
-            if codigo:
-                log(f"  ✔ Código detectado: {codigo}")
-                if codigo != codigo_actual:
-                    # Nuevo paciente encontrado
-                    codigo_actual = codigo
-                    grupos.append((codigo, [i]))
-                    log(f"  → Nuevo paciente: {codigo}")
-                else:
-                    # Misma persona, agregar página al grupo actual
-                    grupos[-1][1].append(i)
+            if codigo_modulo and codigo_paciente:
+                # Página con encabezado completo → registrar referencia cruzada
+                mapa_cod_largo_a_modulo[codigo_paciente] = codigo_modulo
+                log(f"  ↔ Referencia cruzada: {codigo_paciente} → módulo {codigo_modulo}")
+            elif codigo_modulo:
+                log(f"  ✔ Módulo detectado: {codigo_modulo}")
+            elif codigo_paciente:
+                log(f"  ~ Código de paciente sin módulo: {codigo_paciente}")
             else:
-                log("  ✖ No se detectó código en esta página")
-                paginas_sin_codigo += 1
-                if grupos:
-                    # Asignar al último paciente
-                    grupos[-1][1].append(i)
-                    log(f"  → Asignada al paciente actual: {grupos[-1][0]}")
-                else:
-                    # Primera(s) página(s) sin código — crear grupo temporal
-                    if not grupos:
-                        grupos.append(("SIN_CODIGO", [i]))
-                        log("  → Asignada a grupo 'SIN_CODIGO' (inicio del PDF)")
+                log("  - Sin identificadores en esta página")
 
-            # Actualizar progreso
             if callback_progreso:
-                callback_progreso(num_pagina, total_paginas)
+                callback_progreso(num_pagina, total_pasos)
     finally:
         pdf_doc.close()
+
+    log(f"\n  Referencias cruzadas construidas: {len(mapa_cod_largo_a_modulo)}")
+    for cod, mod in mapa_cod_largo_a_modulo.items():
+        log(f"    {cod} → {mod}")
+
+    # ---------------------------------------------------------------------------
+    # Pasada 2: Agrupación de páginas por paciente
+    # ---------------------------------------------------------------------------
+    log("\n── Pasada 2/2: Agrupación de páginas por paciente ──")
+    grupos: list[tuple[str, list[int]]] = []
+    codigo_actual: Optional[str] = None
+    paginas_sin_codigo = 0
+
+    for i, texto in enumerate(textos_paginas):
+        num_pagina = i + 1
+        log(f"\n--- Página {num_pagina}/{total_paginas} ---")
+
+        codigo_modulo, codigo_paciente = extraer_identificadores(texto)
+
+        # Determinar el código efectivo de agrupación según la prioridad:
+        # 1) número de módulo  2) cód. largo resuelto  3) cód. largo sin resolver
+        codigo_efectivo: Optional[str] = None
+
+        if codigo_modulo:
+            codigo_efectivo = codigo_modulo
+            log(f"  ✔ Código de módulo: {codigo_modulo}")
+        elif codigo_paciente:
+            if codigo_paciente in mapa_cod_largo_a_modulo:
+                codigo_efectivo = mapa_cod_largo_a_modulo[codigo_paciente]
+                log(f"  ✔ Código resuelto: {codigo_paciente} → módulo {codigo_efectivo}")
+            else:
+                codigo_efectivo = codigo_paciente
+                log(f"  ✔ Código de paciente (sin módulo correspondiente): {codigo_paciente}")
+
+        if codigo_efectivo:
+            if codigo_efectivo != codigo_actual:
+                # Nuevo paciente detectado
+                codigo_actual = codigo_efectivo
+                grupos.append((codigo_efectivo, [i]))
+                log(f"  → Nuevo paciente: {codigo_efectivo}")
+            else:
+                # Continuación del paciente actual
+                grupos[-1][1].append(i)
+                log(f"  → Continuación del paciente: {codigo_efectivo}")
+        else:
+            log("  ✖ No se detectó código en esta página")
+            paginas_sin_codigo += 1
+            if grupos:
+                # Asignar al último paciente conocido
+                grupos[-1][1].append(i)
+                log(f"  → Asignada al paciente actual: {grupos[-1][0]}")
+            else:
+                # Primera(s) página(s) sin código — crear grupo temporal
+                grupos.append(("SIN_CODIGO", [i]))
+                log("  → Asignada a grupo 'SIN_CODIGO' (inicio del PDF)")
+
+        if callback_progreso:
+            callback_progreso(total_paginas + num_pagina, total_pasos)
 
     # Generar PDFs de salida
     log(f"\n{'='*50}")

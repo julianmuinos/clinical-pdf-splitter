@@ -8,18 +8,23 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
 
 - **Procesamiento de PDFs escaneados:** Renderiza páginas a alta resolución y extrae el texto mediante **Tesseract OCR**.
 - **Sin dependencia externa de Poppler:** Utiliza pypdfium2 para renderizar PDFs de manera nativa, ligera y sin necesidad de instalar binarios adicionales de Poppler.
-- **Detección inteligente de códigos:**
+- **Detección inteligente de códigos e identificadores:**
   - Busca patrones con estructura `Módulo: <prefijo> <código>` y extrae el identificador del paciente. Tolerante a corrupciones severas de OCR en la palabra "Módulo" (por ejemplo `móbuio`, `moóduio`).
   - **Prefijos de módulo verificados:** `NM0`, `NM1`, `NM2`, `NM3`, `NM4`, `NM5`, `NM10`, `NM1A`, `NM5B`, `NM9A` y variantes alfanuméricas.
-  - **Formatos de código de paciente soportados:**
-    - Solo numéricos de 1 a 4 dígitos (ej. `79`, `102`, `1710`).
+  - **Formatos de número de historia clínica soportados:**
+    - Solo numéricos de 1 a 4 dígitos (ej. `79`, `102`, `990`, `1710`).
     - 1 letra + 3 a 4 dígitos (ej. `P050`, `D0004`, `F0001`).
     - 2 letras + 4 dígitos (ej. `GE1347`, `PR0019`).
     - 3 letras + 3 dígitos (ej. `GEP086`).
-  - **Mecanismo de respaldo:** Si una hoja no presenta el encabezado de módulo, detecta identificadores alternativos como `Código paciente:`, `COD. PACIENTE:`, `CÓD. PACIENTE:` y variantes OCR abreviadas.
+  - **Mecanismos de respaldo y documentos adjuntos:**
+    - Detecta variantes con alta tolerancia a ruido OCR en `Código paciente:`, `CÓD. PACIENTE:`, `c?b. paciente`, etc.
+    - Soporta identificadores en remitos, recetas y documentos vinculados con formato `Paciente: <código>` (ej. `Paciente: MNICH25021988` con iniciales y fecha de nacimiento).
   - Expresiones regulares tolerantes a fallos típicos de escaneo u OCR (con o sin tildes, mayúsculas/minúsculas).
-- **Agrupación continua de historias clínicas:** Si una página interna no incluye encabezado con código, se asigna automáticamente al último paciente detectado.
-- **Interfaz Gráfica amigable (GUI):** Selector de archivos y carpetas, barra de progreso en tiempo real y terminal de log integrada.
+- **Algoritmo de dos pasadas con referencias cruzadas:**
+  - **Pasada 1 (OCR y mapeo):** Escanea las páginas y construye un mapa de equivalencias cruzadas entre el código largo del paciente y el número de módulo a partir de encabezados completos.
+  - **Pasada 2 (Agrupación inteligente):** Resuelve y unifica remitos o páginas secundarias que solo tienen el código largo con el número de historia clínica correspondiente, consolidándolos en el mismo archivo PDF.
+- **Agrupación continua de historias clínicas:** Si una página interna no incluye encabezado ni código, se asigna automáticamente al último paciente detectado.
+- **Interfaz Gráfica amigable (GUI):** Selector de archivos y carpetas, barra de progreso en tiempo real (dividida en fases de OCR y agrupación) y terminal de log integrada.
 - **100% Local y Seguro:** El procesamiento se realiza completamente offline en tu máquina. Ningún dato médico es transmitido a la nube.
 
 ---
@@ -66,7 +71,7 @@ Herramienta de escritorio en Python con interfaz gráfica para dividir archivos 
    - Presionar **"Seleccionar PDF..."** y elegir el archivo escaneado con las historias clínicas.
    - Seleccionar la **carpeta de salida** (por defecto sugerirá una carpeta llamada Pacientes_Separados).
    - Hacer clic en **"⚙ Procesar"**.
-3. El log detallará cada página procesada y los archivos resultantes generados (ej. `GE3418.pdf`, `P050.pdf`, `1710.pdf`, `102.pdf`, `79.pdf`).
+3. El log detallará cada fase (extracción OCR y agrupación), las referencias cruzadas encontradas y los archivos resultantes generados (ej. `990.pdf`, `GE3418.pdf`, `P050.pdf`, `1710.pdf`, `102.pdf`, `79.pdf`).
 
 ---
 
